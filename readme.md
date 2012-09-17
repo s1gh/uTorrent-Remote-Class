@@ -11,3 +11,7 @@ Features
 * Use actions to add, delete, start, stop, pause etc. torrents in uTorrent.
 * Convert from bytes to kB, MB & GB.
 * Convert from bytes per second to kB/s, MB/s & GB/s.
+
+How To Use
+----------
+Read wiki for more information.

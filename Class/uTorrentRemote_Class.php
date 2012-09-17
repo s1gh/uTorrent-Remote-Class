@@ -1,7 +1,7 @@
 <?php
 
 /* PHP Error Reporting */
-error_reporting(0);
+error_reporting(-1);
 /* ------------------- */
 
 /* Status codes used by uTorrent*/
@@ -49,7 +49,7 @@ class uTorrentRemote
 	
 	public function __construct($_host, $_user, $_passwd)
 	{
-		if (!(isset($_host) && isset($_user) && isset($_passwd))) { die('Error: ' . get_class() . '::construct()' . ' takes exacly 3 arguments.'); }
+		if (!(isset($_host) && isset($_user) && isset($_passwd))) { die('Error: ' . get_class() . '::construct()' . ' takes exactly 3 arguments.'); }
 		
 		$this->Hostname = $_host; /* uTorrent WebUI's hostname/ip address. Ex: 127.0.0.1:4321 */
 		$this->Username = $_user; /* Username for uTorrent WebUI */
@@ -67,26 +67,82 @@ class uTorrentRemote
 	
 	public function GrabTorrents()
 	{
-		$TorrentsJson = $this->GetContents($this->Hostname . '/gui/?list=1&token=' . $this->AuthToken);
-		$Torrents = json_decode($TorrentsJson, true);
-		$Torrents = $Torrents['torrents'];
+		$JsonResponse = $this->SendRequest($this->Hostname . '/gui/?list=1&token=' . $this->AuthToken);
+		$Torrents = json_decode($JsonResponse, true);
 		
-		return $Torrents;
+		return $Torrents['torrents'];
 	}
 	
 	public function GrabLabels()
 	{
-		$LabelsJson = $this->GetContents($this->Hostname . '/gui/?list=1&token=' . $this->AuthToken);
-		$Labels = json_decode($LabelsJson, true);
-		$Labels = $Labels['labels'];
+		$JsonResponse = $this->SendRequest($this->Hostname . '/gui/?list=1&token=' . $this->AuthToken);
+		$Labels = json_decode($JsonResponse, true);
 		
-		return $Labels;
+		return $Labels['labels'];
+	}
+	
+	public function GrabListOfFiles($_torrentHash)
+	{
+		$JsonResponse = $this->SendRequest($this->Hostname . '/gui/?action=getfiles&hash=' . $_torrentHash . '&token=' . $this->AuthToken);
+		$TorrentFiles = json_decode($JsonResponse, true);
+		
+		return $TorrentFiles['files'];
+	}
+	
+	public function GrabTorrentProperties($_torrentHash)
+	{
+		$JsonResponse = $this->SendRequest($this->Hostname . '/gui/?action=getprops&hash=' . $_torrentHash . '&token=' . $this->AuthToken);
+		$Properties = json_decode($JsonResponse, true);
+		
+		return $Properties['props'];
 	}
 	
 	public function CheckStatusCode($_torrentStatuscode, $_statuscode)
 	{
 	
 		return ( ($_statuscode == ($_torrentStatuscode & $_statuscode)) ? true : false);
+	}
+	
+	public function GrabSettings()
+	{
+		$JsonResponse = $this->SendRequest($this->Hostname . '/gui/?action=getsettings&token=' . $this->AuthToken);
+		$Settings = json_decode($JsonResponse, true);
+		
+		return $Settings['settings'];
+	}
+	
+	public function ExecAction($_action, $_torrentHash, $_prority = 0, $_fileIndex = 0, $torrentUrl = '')
+	{
+		switch ($_action)
+		{
+			case 'start':
+				$this->SendRequest($this->Hostname . '/gui/?action=start&hash=' . $_torrentHash .'&token=' . $this->AuthToken);
+				break;
+			case 'stop':
+				$this->SendRequest($this->Hostname . '/gui/?action=stop&hash=' . $_torrentHash .'&token=' . $this->AuthToken);
+				break;
+			case 'forcestart':
+				$this->SendRequest($this->Hostname . '/gui/?action=forcestart&hash=' . $_torrentHash .'&token=' . $this->AuthToken);
+				break;
+			case 'unpause':
+				$this->SendRequest($this->Hostname . '/gui/?action=unpause&hash=' . $_torrentHash .'&token=' . $this->AuthToken);
+				break;
+			case 'recheck':
+				$this->SendRequest($this->Hostname . '/gui/?action=recheck&hash=' . $_torrentHash .'&token=' . $this->AuthToken);
+				break;
+			case 'remove':
+				$this->SendRequest($this->Hostname . '/gui/?action=remove&hash=' . $_torrentHash .'&token=' . $this->AuthToken);
+				break;
+			case 'removedata':
+				$this->SendRequest($this->Hostname . '/gui/?action=removedata&hash=' . $_torrentHash .'&token=' . $this->AuthToken);
+				break;
+			case 'setprio':
+				$this->SendRequest($this->Hostname . '/gui/?action=setprio&hash=' . $_torrentHash . '&p=' . $_priority . '&f=' . $_fileIndex .'&token=' . $this->AuthToken);
+				break;
+			case 'add-url':
+				$this->SendRequest($this->Hostname . '/gui/?action=add-url&s=' . $_torrentUrl .'&token=' . $this->AuthToken);
+				break;
+		}
 	}
 	
 	public function SpeedConvert($SpeedInBytes)
@@ -133,10 +189,9 @@ class uTorrentRemote
 		}
 	}
 	
-	private function GetContents($Url)
+	private function SendRequest($Url)
 	{
 		curl_setopt($this->Crl, CURLOPT_URL, $Url);
-		curl_setopt($this->Crl, CURLOPT_HEADER, true);
 		curl_setopt($this->Crl, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($this->Crl, CURLOPT_CONNECTTIMEOUT, 5);
 		curl_setopt($this->Crl, CURLOPT_USERPWD, $this->Username . ':' . $this->Password);
@@ -145,22 +200,18 @@ class uTorrentRemote
 		
 		$Ret = curl_exec($this->Crl);
 		
-		
-		switch (curl_getinfo($this->Crl, CURLINFO_HTTP_CODE))
-		{
-			case 0:
-				die('Error: Could not connect to remote server.');
-			
-			case 401:
-				die('Error: Authorization required. Please enter a valid username and/or password.');
-		}
-		
 		return $Ret;
 	}
 	
 	private function GetToken()
 	{
-		return strip_tags($this->GetContents('http://' . $this->Username . ":" . $this->Password . "@" . $this->Hostname . '/gui/token.html'));
+		return strip_tags($this->SendRequest('http://' . $this->Username . ":" . $this->Password . "@" . $this->Hostname . '/gui/token.html'));
 	}
 }
+
+$uTorrent = new uTorrentRemote('127.0.0.1:4321','s1gh','92016861');
+// print_r($uTorrent->GrabSettings());
+print_r($uTorrent->GrabTorrents());
+$uTorrent->ExecAction('start', '826BD18B00C0AB04A599D580BB416D3936C46CF5');
+
 ?>

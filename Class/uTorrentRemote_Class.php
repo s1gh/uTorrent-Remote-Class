@@ -208,10 +208,4 @@ class uTorrentRemote
 		return strip_tags($this->SendRequest('http://' . $this->Username . ":" . $this->Password . "@" . $this->Hostname . '/gui/token.html'));
 	}
 }
-
-$uTorrent = new uTorrentRemote('127.0.0.1:4321','s1gh','92016861');
-// print_r($uTorrent->GrabSettings());
-print_r($uTorrent->GrabTorrents());
-$uTorrent->ExecAction('start', '826BD18B00C0AB04A599D580BB416D3936C46CF5');
-
 ?>

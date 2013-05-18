@@ -111,7 +111,7 @@ class uTorrentRemote
 		return $Settings['settings'];
 	}
 	
-	public function ExecAction($_action, $_torrentHash, $_prority = 0, $_fileIndex = 0, $torrentUrl = '')
+	public function ExecAction($_action, $_torrentHash, $_prority = 0, $_fileIndex = 0, $_torrentUrl = '')
 	{
 		switch ($_action)
 		{
